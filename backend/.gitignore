@@ -1,4 +1,6 @@
 node_modules
 .env
 /src/generated/prisma
-
+/src/testCRUD.ts
+/src/testMongo.ts
+/src/testNeo4j.ts
