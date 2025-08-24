@@ -1,4 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    window.location.href = './login.html';
+    return;
+  }
+
   const API_URL = "http://localhost:3000/institutions";
   const NOMATIM_URL = "https://nominatim.openstreetmap.org/search";
 
@@ -6,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     temporaryMarker,
     institutionMarkers,
     institutionsCache = [];
-  let editState = { isEditing: false, id: null, originalCnpj: null };
+  let editState = { isEditing: false, id: null };
 
   const formModal = document.getElementById("form-modal");
   const addInstitutionBtn = document.getElementById("add-institution-btn");
@@ -15,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sidebar = document.getElementById("sidebar");
   const toggleOpenBtn = document.getElementById("toggle-sidebar-btn-open");
   const toggleCloseBtn = document.getElementById("toggle-sidebar-btn-close");
+  const logoutBtn = document.getElementById("logout-btn");
 
   function initMap() {
     map = L.map("map").setView([-6.7595, -38.2312], 13);
@@ -23,8 +30,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }).addTo(map);
     institutionMarkers = L.layerGroup().addTo(map);
     map.on("click", onMapClick);
-    map.on("popupopen", handlePopupOpen);
     loadInstitutions();
+  }
+
+  function getAuthHeaders() {
+    const token = localStorage.getItem('authToken');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
   }
 
   async function loadInstitutions() {
@@ -36,22 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(`Erro na API: ${response.statusText}`);
       } else {
         const institutions = await response.json();
-        institutionsCache = institutions
-          .map((inst) => {
-            try {
-              if (typeof inst.localization === "string") {
-                inst.localization = JSON.parse(inst.localization);
-              }
-              return inst;
-            } catch (e) {
-              console.error(
-                "Failed to parse localization for institution:",
-                inst
-              );
-              return null;
-            }
-          })
-          .filter(Boolean);
+        institutionsCache = institutions.filter(inst => inst.localization && inst.localization.coordinates);
       }
       renderAll();
     } catch (error) {
@@ -109,10 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         <p><strong>CNPJ:</strong> ${institution.cnpj}</p>
                         <p><strong>Contato:</strong> ${institution.contact}</p>
                         <p><strong>Descrição:</strong> ${institution.description}</p>
-                        <div class="popup-actions">
-                           <button data-action="edit" class="text-blue-600 hover:underline">Editar</button>
-                           <button data-action="delete" class="text-red-600 hover:underline">Excluir</button>
-                        </div>
                     </div>`;
     institution.marker = L.marker([lat, lng])
       .addTo(institutionMarkers)
@@ -121,30 +116,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openForm(mode = "create", institution = null) {
     institutionForm.reset();
-    const cnpjFieldDiv = document.getElementById("cnpj").parentElement;
+    const cnpjField = document.getElementById("cnpj");
     if (mode === "edit" && institution) {
-      editState = {
-        isEditing: true,
-        id: institution.id,
-        originalCnpj: institution.cnpj,
-      };
+      editState = { isEditing: true, id: institution.id };
       document.getElementById("form-title").textContent = "Editar Instituição";
       document.getElementById("submit-btn").textContent = "Atualizar";
       document.getElementById("institutionId").value = institution.id;
       document.getElementById("name").value = institution.name;
-      // Esconde o campo de CNPJ ao editar
-      cnpjFieldDiv.style.display = "none";
+      cnpjField.value = institution.cnpj;
+      cnpjField.disabled = true; 
       document.getElementById("contact").value = institution.contact;
       document.getElementById("description").value = institution.description;
       const [lng, lat] = institution.localization.coordinates;
       updateFormLocation(lat, lng);
       map.setView([lat, lng], 15);
     } else {
-      editState = { isEditing: false, id: null, originalCnpj: null };
+      editState = { isEditing: false, id: null };
       document.getElementById("form-title").textContent = "Nova Instituição";
       document.getElementById("submit-btn").textContent = "Salvar";
-      // Mostra o campo de CNPJ ao criar
-      cnpjFieldDiv.style.display = "";
+      cnpjField.disabled = false;
     }
     formModal.classList.remove("hidden");
   }
@@ -194,7 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
       positionY: parseFloat(data.positionY),
     };
 
-    // Só adiciona o CNPJ se for criação
     if (!editState.isEditing) {
       payload.cnpj = data.cnpj;
     }
@@ -204,15 +193,17 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Erro desconhecido");
+      
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Erro desconhecido");
+      }
+      
       showToast(
-        `Instituição ${
-          editState.isEditing ? "atualizada" : "criada"
-        } com sucesso!`,
+        `Instituição ${editState.isEditing ? "atualizada" : "criada"} com sucesso!`,
         "success"
       );
       closeForm();
@@ -223,14 +214,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function handleDelete(id) {
-    if (
-      !confirm(
-        "Tem certeza que deseja excluir esta instituição? A ação não pode ser desfeita."
-      )
-    )
-      return;
+    if (!confirm("Tem certeza que deseja excluir esta instituição?")) return;
     try {
-      const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const response = await fetch(`${API_URL}/${id}`, { 
+          method: "DELETE",
+          headers: getAuthHeaders()
+      });
       if (!response.ok) {
         const result = await response.json();
         throw new Error(result.error || "Erro desconhecido");
@@ -240,19 +229,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       handleFetchError(error, "excluir");
     }
-  }
-
-  function handlePopupOpen(e) {
-    const popupNode = e.popup.getElement().querySelector(".custom-popup");
-    if (!popupNode) return;
-    const id = parseInt(popupNode.dataset.id, 10);
-    const institution = institutionsCache.find((inst) => inst.id === id);
-    if (!institution) return;
-
-    const editBtn = popupNode.querySelector('[data-action="edit"]');
-    const deleteBtn = popupNode.querySelector('[data-action="delete"]');
-    editBtn.onclick = () => openForm("edit", institution);
-    deleteBtn.onclick = () => handleDelete(id);
   }
 
   // --- UI ---
@@ -266,6 +242,11 @@ document.addEventListener("DOMContentLoaded", () => {
   toggleCloseBtn.addEventListener("click", () =>
     sidebar.classList.add("-ml-[100%]")
   );
+  
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('authToken');
+    window.location.href = './login.html';
+  });
 
   document
     .getElementById("search-btn")
@@ -284,9 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resultsDiv.textContent = "Buscando...";
     try {
       const response = await fetch(
-        `${NOMATIM_URL}?format=json&q=${encodeURIComponent(
-          query
-        )}&countrycodes=br`,
+        `${NOMATIM_URL}?format=json&q=${encodeURIComponent(query)}&countrycodes=br`,
         { headers: { "User-Agent": "InstituicoesApp/1.0" } }
       );
       const data = await response.json();
@@ -307,8 +286,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleFetchError(error, action) {
     console.error(`Erro ao ${action} instituição:`, error);
     let userMessage = `Falha ao ${action}. Verifique a conexão.`;
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      userMessage = `Erro de conexão: Verifique se o servidor back-end está rodando e se o CORS está configurado.`;
+    
+    if (error.message.includes("Token") || error.message.includes("autenticado")) {
+        userMessage = "Sua sessão expirou. Por favor, faça login novamente.";
+        setTimeout(() => {
+            logoutBtn.click();
+        }, 3000);
+    } else if (error instanceof TypeError && error.message.includes("fetch")) {
+      userMessage = `Erro de conexão: Verifique se o servidor back-end está rodando.`;
     } else if (error.message) {
       userMessage = `Erro ao ${action}: ${error.message}`;
     }
@@ -322,6 +307,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toast.className = `fixed bottom-5 right-5 z-40 px-5 py-3 rounded-lg text-white ${
       type === "success" ? "bg-green-500" : "bg-red-500"
     }`;
+    toast.classList.remove('hidden');
     setTimeout(() => {
       toast.classList.add("hidden");
     }, 5000);
