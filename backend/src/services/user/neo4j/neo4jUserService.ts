@@ -1,4 +1,3 @@
-import driver from "../../../database/neo4j";
 import { getSession } from "../../../database/neo4j";
 
 export async function createUserNeo4j(id: string, name: string, email: string) {

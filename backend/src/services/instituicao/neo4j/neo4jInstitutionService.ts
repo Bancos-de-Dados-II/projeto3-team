@@ -1,27 +1,50 @@
-import { randomUUID } from 'crypto';
 import { getSession } from '../../../database/neo4j';
 
-//Create
-export async function createInstitutionNeo4j(name: string, cnpj: string, contact: string, description: string, positionX: number, positionY: number, userId?: string) {
-    const session = getSession();
-    try {
-        await session.run(
-            'CREATE (i:Institution {id: $id, name: $name, cnpj: $cnpj, contact: $contact, description: $description, positionX: $positionX, positionY: $positionY, userId: $userId})',
-            {
-                id: randomUUID(),
-                name,
-                cnpj,
-                contact,
-                description,
-                positionX,
-                positionY,
-                userId: userId || null // Garante que userId nunca será undefined
-            }
-        );
-    } finally {
-        await session.close();
-    }
+export async function createInstitutionNeo4j(
+  id: string,
+  name: string,
+  cnpj: string,
+  contact: string,
+  description: string,
+  positionX: number,
+  positionY: number,
+  userId?: string
+) {
+  const session = getSession();
+  
+  try {
+    // Cria a instituição e conecta ao usuário se userId existir
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      CREATE (i:Institution {
+        id: $id,
+        name: $name,
+        cnpj: $cnpj,
+        contact: $contact,
+        description: $description,
+        positionX: $positionX,
+        positionY: $positionY
+      })
+      MERGE (u)-[:CREATED]->(i)
+      RETURN i
+      `,
+      {
+        id,
+        name,
+        cnpj,
+        contact,
+        description,
+        positionX,
+        positionY,
+        userId: userId || null
+      }
+    );
+  } finally {
+    await session.close();
+  }
 }
+
 
 //UPDATE 
 export async function updateInstitutionNeo4j(id: string, data: { name?: string; contact?: string; description?: string; positionX?: number; positionY?: number }) {
@@ -43,37 +66,6 @@ export async function updateInstitutionNeo4j(id: string, data: { name?: string; 
     } finally {
         await session.close();
     }
-}
-
-//READ
-export async function getInstitutionNeo4j() {
-    const session = getSession();
-  try {
-    const result = await session.run(
-      'MATCH (i:Institution) RETURN i'
-    );
-
-    const institutions = result.records.map(record => {
-      const node = record.get('i').properties;
-      return {
-        id: node.id,
-        name: node.name,
-        cnpj: node.cnpj,
-        contact: node.contact,
-        description: node.description,
-        localization: {
-          type: "Point",
-          coordinates: [node.positionX, node.positionY]
-        },
-        createdAt: node.createdAt,
-        updatedAt: node.updatedAt
-      };
-    });
-
-    return institutions;
-  } finally {
-    await session.close();
-  }
 }
 
 //DELETE
