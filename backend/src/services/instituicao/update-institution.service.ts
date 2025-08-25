@@ -6,8 +6,6 @@ export async function updateInstitutionService(id: string, data: InstitutionUpda
   const { name, contact, description, positionX, positionY } = data;
   const coordinates = [(Number)(positionX), (Number)(positionY)];
 
-  console.log("Atualizando instituição:", id);
-  
   await prisma.instituicao.update({
     where: { id: id },
     data: {
@@ -21,7 +19,6 @@ export async function updateInstitutionService(id: string, data: InstitutionUpda
     }
   });
 
-  /*
   await updateInstitutionNeo4j(id, { 
     name, 
     contact, 
@@ -29,5 +26,4 @@ export async function updateInstitutionService(id: string, data: InstitutionUpda
     positionX: coordinates[0],
     positionY: coordinates[1]
   });
-  */
 }

@@ -1,5 +1,4 @@
 import { getSession } from '../../../database/neo4j';
-import { randomUUID } from 'crypto';
 
 export async function createInstitutionNeo4j(
   id: string,
@@ -12,9 +11,7 @@ export async function createInstitutionNeo4j(
   userId?: string
 ) {
   const session = getSession();
-  console.log(id);
-
-
+  
   try {
     // Cria a instituição e conecta ao usuário se userId existir
     await session.run(
@@ -69,37 +66,6 @@ export async function updateInstitutionNeo4j(id: string, data: { name?: string; 
     } finally {
         await session.close();
     }
-}
-
-//READ
-export async function getInstitutionNeo4j() {
-    const session = getSession();
-  try {
-    const result = await session.run(
-      'MATCH (i:Institution) RETURN i'
-    );
-
-    const institutions = result.records.map(record => {
-      const node = record.get('i').properties;
-      return {
-        id: node.id,
-        name: node.name,
-        cnpj: node.cnpj,
-        contact: node.contact,
-        description: node.description,
-        localization: {
-          type: "Point",
-          coordinates: [node.positionX, node.positionY]
-        },
-        createdAt: node.createdAt,
-        updatedAt: node.updatedAt
-      };
-    });
-
-    return institutions;
-  } finally {
-    await session.close();
-  }
 }
 
 //DELETE
