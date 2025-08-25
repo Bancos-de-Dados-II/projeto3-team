@@ -2,7 +2,7 @@ import prisma from "../../prisma/client";
 import { User } from "../../@types/user";
 import { comparePassword } from "../../utils/hash.util";
 
-export async function loginService(email: string, password: string): Promise<User | null> {
+export async function loginService(email: string, password: string): Promise<Omit<User, "password"> | null>  {
     const user = await prisma.user.findUnique({
         where: { email }
     })
@@ -13,6 +13,11 @@ export async function loginService(email: string, password: string): Promise<Use
     }
 
     const isPasswordValid = await comparePassword(password, user.password);
-    return isPasswordValid ? user : null;
+    if (!isPasswordValid) return null;
+
+    // remove a senha antes de retornar
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+        
 
 }

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+/* import { Request, Response } from "express";
 import { getIdInstitutionService } from "../../services/instituicao/get-id-institution.service";
 
 export const getIdInstitutionController = async (req: Request, res: Response) => {
@@ -14,3 +14,4 @@ export const getIdInstitutionController = async (req: Request, res: Response) =>
         return;
     }
 }
+ */

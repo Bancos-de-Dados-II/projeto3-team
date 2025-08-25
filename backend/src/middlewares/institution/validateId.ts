@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import prisma from "../../prisma/client";
+import { getSession } from "../../database/neo4j";
 
-export const validateId = async ( req: Request, res: Response, next: NextFunction ) => {
+export const validateId = async (req: Request, res: Response, next: NextFunction) => {
+  const session = getSession();
   try {
     const { id } = req.params;
     if (!id) {
@@ -9,19 +10,20 @@ export const validateId = async ( req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    const institution = await prisma.instituicao.findUnique({
-      where: { id: id },
-    });
+    const result = await session.run(
+      'MATCH (i:Institution {id: $id}) RETURN i',
+      { id }
+    );
 
-    if (!institution) {
+    if (result.records.length === 0) {
       res.status(404).json({ error: "Instituição não encontrada" });
       return;
     }
     next();
-
   } catch (error) {
     console.error("Erro ao validar id da instituição:", error);
     res.status(500).json({ error: "Erro interno no servidor" });
-    return;
+  } finally {
+    await session.close();
   }
 };

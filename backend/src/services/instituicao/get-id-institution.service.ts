@@ -1,4 +1,4 @@
-import prisma from "../../prisma/client";
+/* import prisma from "../../prisma/client";
 import { InstitutionGet } from "../../@types/instituicao";
 import { ObjectId } from "bson";
 
@@ -16,3 +16,4 @@ export async function getIdInstitutionService(id: string): Promise<InstitutionGe
     return null;
   }
 }
+ */

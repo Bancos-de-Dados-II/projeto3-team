@@ -2,15 +2,9 @@ import { Request, Response } from "express";
 import { createInstitutionService } from "../../services/instituicao/create-institution.service";
 
 export const createInstitutionController = async ( req: Request, res: Response ) => {
+  const userId = req.user?.id; // ID do usuário autenticado
   try {
     const { name, cnpj, contact, description, positionX, positionY } = req.body;
-    const userId = req.user?.id;
-
-    if (!userId) {
-      res.status(401).json({ error: 'Usuário não autenticado' });
-      return;
-    }
-
     if (
       !name ||
       !cnpj ||
@@ -30,8 +24,8 @@ export const createInstitutionController = async ( req: Request, res: Response )
       description,
       positionX,
       positionY,
-      }, userId 
-    );
+      userId
+    });
 
     res.status(201).json({ message: "Instituição criada com sucesso!" });
     return;

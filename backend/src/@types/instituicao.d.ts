@@ -5,6 +5,7 @@ export interface Institution {
   description: string;
   positionX: number;
   positionY: number;
+  userId?: string;
 }
 
 export interface InstitutionGet {

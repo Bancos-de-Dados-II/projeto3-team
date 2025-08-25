@@ -16,7 +16,7 @@ export const comparePassword = async (password: string, passwordHash: string): P
 }
 
 // Função para gerar um token JWT
-export const generateToken = (user: User): string => {
+export const generateToken = (user: Omit<User, "password">): string => {
     return jwt.sign(
         { id: user.id, name: user.name, email: user.email, role: user.role },
         process.env.JWT_SECRET!,
