@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Mapa de Instituições</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .form-container { display: block; }
+        .hidden-form { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+        <!-- Formulario Login-->
+        <div id="login-container" class="form-container">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Entrar</h2>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="login-email" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="login-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Login
+                    </button>
+                </div>
+            </form>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                Não tem uma conta?
+                <a href="#" id="show-register" class="font-medium text-blue-600 hover:text-blue-500">
+                    Cadastre-se
+                </a>
+            </p>
+        </div>
+
+        <!-- Formulario Cadastro -->
+        <div id="register-container" class="hidden-form">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Criar Conta</h2>
+            <form id="register-form" class="space-y-6">
+                <div>
+                    <label for="register-name" class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                    <input type="text" id="register-name" name="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="register-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="register-email" name="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="register-password" class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input type="password" id="register-password" name="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cadastrar
+                    </button>
+                </div>
+            </form>
+            <p class="mt-4 text-center text-sm text-gray-600">
+                Já tem uma conta?
+                <a href="#" id="show-login" class="font-medium text-blue-600 hover:text-blue-500">
+                    Faça login
+                </a>
+            </p>
+        </div>
+         <div id="toast" class="hidden fixed bottom-5 right-5 z-50 px-5 py-3 rounded-lg text-white"><p id="toast-message"></p></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_BASE_URL = 'http://localhost:3000';
+            const loginContainer = document.getElementById('login-container');
+            const registerContainer = document.getElementById('register-container');
+            const showRegisterBtn = document.getElementById('show-register');
+            const showLoginBtn = document.getElementById('show-login');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            showRegisterBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginContainer.classList.remove('form-container');
+                loginContainer.classList.add('hidden-form');
+                registerContainer.classList.remove('hidden-form');
+                registerContainer.classList.add('form-container');
+            });
+
+            showLoginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                registerContainer.classList.remove('form-container');
+                registerContainer.classList.add('hidden-form');
+                loginContainer.classList.remove('hidden-form');
+                loginContainer.classList.add('form-container');
+            });
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(loginForm);
+                const data = Object.fromEntries(formData.entries());
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/users/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.erro || 'Falha no login');
+                    }
+
+                    localStorage.setItem('authToken', result.token);
+                    
+                    window.location.href = './index.html';
+
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            });
+
+            // Logica de Registro
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(registerForm);
+                const data = Object.fromEntries(formData.entries());
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/users/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Falha no cadastro');
+                    }
+
+                    showToast('Usuário cadastrado com sucesso! Faça o login.', 'success');
+                    showLoginBtn.click();
+                    registerForm.reset();
+
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            });
+            
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+                toastMessage.textContent = message;
+                toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-lg text-white ${
+                  type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                }`;
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                  toast.classList.add('hidden');
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
