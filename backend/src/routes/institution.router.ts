@@ -13,7 +13,7 @@ import { checkInstitutionPermission } from "../middlewares/institution/checkInst
 const router = Router();
 
 router.post("/", authenticateToken, validateCnpj, createInstitutionController);
-router.delete("/:id", authenticateToken, validateId, checkInstitutionPermission, deleteInstitutionController);
+router.delete("/:id", deleteInstitutionController);
 router.get("/", getInstitutionController);
 // router.get("/:id", validateId, getIdInstitutionController);
 router.put("/:id", authenticateToken, validateId, checkInstitutionPermission, updateInstitutionController);

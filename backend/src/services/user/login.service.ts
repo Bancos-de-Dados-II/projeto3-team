@@ -18,6 +18,4 @@ export async function loginService(email: string, password: string): Promise<Omi
     // remove a senha antes de retornar
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
-        
-
 }

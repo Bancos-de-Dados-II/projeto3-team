@@ -1,27 +1,53 @@
-import { randomUUID } from 'crypto';
 import { getSession } from '../../../database/neo4j';
+import { randomUUID } from 'crypto';
 
-//Create
-export async function createInstitutionNeo4j(name: string, cnpj: string, contact: string, description: string, positionX: number, positionY: number, userId?: string) {
-    const session = getSession();
-    try {
-        await session.run(
-            'CREATE (i:Institution {id: $id, name: $name, cnpj: $cnpj, contact: $contact, description: $description, positionX: $positionX, positionY: $positionY, userId: $userId})',
-            {
-                id: randomUUID(),
-                name,
-                cnpj,
-                contact,
-                description,
-                positionX,
-                positionY,
-                userId: userId || null // Garante que userId nunca será undefined
-            }
-        );
-    } finally {
-        await session.close();
-    }
+export async function createInstitutionNeo4j(
+  id: string,
+  name: string,
+  cnpj: string,
+  contact: string,
+  description: string,
+  positionX: number,
+  positionY: number,
+  userId?: string
+) {
+  const session = getSession();
+  console.log(id);
+
+
+  try {
+    // Cria a instituição e conecta ao usuário se userId existir
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      CREATE (i:Institution {
+        id: $id,
+        name: $name,
+        cnpj: $cnpj,
+        contact: $contact,
+        description: $description,
+        positionX: $positionX,
+        positionY: $positionY
+      })
+      MERGE (u)-[:CREATED]->(i)
+      RETURN i
+      `,
+      {
+        id,
+        name,
+        cnpj,
+        contact,
+        description,
+        positionX,
+        positionY,
+        userId: userId || null
+      }
+    );
+  } finally {
+    await session.close();
+  }
 }
+
 
 //UPDATE 
 export async function updateInstitutionNeo4j(id: string, data: { name?: string; contact?: string; description?: string; positionX?: number; positionY?: number }) {
