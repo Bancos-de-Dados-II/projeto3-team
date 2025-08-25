@@ -1,17 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import { getSession } from "../../database/neo4j";
+import prisma from "../../prisma/client";
 
-export const validateCnpj = async (req: Request, res: Response, next: NextFunction) => {
-  const session = getSession();
+export const validateCnpj = async (req: Request, res: Response, next: NextFunction ) => {
   try {
     const { cnpj } = req.body;
     
-    const result = await session.run(
-      'MATCH (i:Institution {cnpj: $cnpj}) RETURN i',
-      { cnpj }
-    );
+    const institution = await prisma.instituicao.findFirst({
+      where: { cnpj },
+    });
 
-    if (result.records.length > 0) {
+    if (institution) {
       res.status(400).json({ error: "CNPJ já cadastrado" });
       return;
     }
@@ -20,7 +18,5 @@ export const validateCnpj = async (req: Request, res: Response, next: NextFuncti
   } catch (error) {
     console.error("Erro ao validar cnpj da instituição:", error);
     res.status(500).json({ error: "Erro interno no servidor" });
-  } finally {
-    await session.close();
   }
 };
